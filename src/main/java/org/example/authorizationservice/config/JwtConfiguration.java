@@ -5,11 +5,14 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -31,26 +34,33 @@ import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Configuration
+@RequiredArgsConstructor
 public class JwtConfiguration {
+
+    private final PasswordEncoder passwordEncoder;
+
     @Bean
     public RegisteredClientRepository registeredClientRepository() {
         RegisteredClient registeredClient =
                 RegisteredClient
                         .withId(UUID.randomUUID().toString())
                         .clientId("client")
-                        .clientSecret("clientSecret")
+                        .clientSecret(passwordEncoder.encode("clientSecret"))
                         .clientSettings(ClientSettings.builder()
                                 .requireProofKey(false)
                                 .build())
                         .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                         .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                        .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
                         .tokenSettings(TokenSettings.builder()
                                 .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED)
                                 .accessTokenTimeToLive(Duration.ofHours(12))
                                 .build())
-                        .redirectUri("http://localhost:8080/codesuccess")
+                        .redirectUri("http://localhost:8080/success")
                         .scope("CUSTOM")
                         .build();
         return new InMemoryRegisteredClientRepository(registeredClient);
@@ -85,16 +95,17 @@ public class JwtConfiguration {
     @Bean
     public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
         return context -> {
+            Authentication authentication = context.getPrincipal();
+            if (authentication != null) {
+                List<String> roles = authentication.getAuthorities()
+                        .stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(Collectors.toList());
 
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-            List<String> roles = authentication.getAuthorities()
-                    .stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .toList();
-            JwtClaimsSet.Builder claims = context.getClaims();
-            claims.claim("priority", "HIGH");
-            claims.claim("roles", roles);
+                context.getClaims().claim("roles", roles);
+                log.info("Roles added to JWT: {}", roles);
+            }
         };
     }
+
 }

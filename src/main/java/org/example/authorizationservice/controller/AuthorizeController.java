@@ -19,10 +19,7 @@ public class AuthorizeController {
         return "register";
     }
 
-    @GetMapping("/success")
-    public String getSuccessForm(){
-        return "success";
-    }
+
 
     @PostMapping("/register")
     public String registrationUser(@ModelAttribute UserDto userDto) {

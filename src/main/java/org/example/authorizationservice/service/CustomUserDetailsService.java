@@ -2,10 +2,10 @@ package org.example.authorizationservice.service;
 
 import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.authorizationservice.dto.UserDto;
 import org.example.authorizationservice.mapper.UserMapper;
 import org.example.authorizationservice.model.CustomUserDetails;
-import org.example.authorizationservice.model.User;
 import org.example.authorizationservice.repository.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
@@ -29,7 +30,10 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         UserDto user = userRepository.findByUsername(username)
                 .map(userMapper::toDto)
-                .orElseThrow();
+                .orElseThrow(() -> new UsernameNotFoundException("User  not found"));
+
+        log.info("user {}, roles {}",user.getUsername(),user.getRoles());
+
         return new CustomUserDetails(user);
     }
 

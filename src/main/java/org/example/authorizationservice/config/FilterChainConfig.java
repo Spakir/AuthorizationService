@@ -18,6 +18,9 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @RequiredArgsConstructor
 public class FilterChainConfig {
 
+   private final String REDIRECT_URI = "http://localhost:8080/oauth2/authorize?"+
+           "response_type=code&client_id=client&redirect_uri=http://localhost:8080/success&scope=CUSTOM";
+
     private final CustomAuthenticationProvider customAuthenticationProvider;
 
     private final CorsConfigurationSource corsConfigurationSource;
@@ -43,10 +46,10 @@ public class FilterChainConfig {
     public SecurityFilterChain formLoginFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(c -> c
-                        .requestMatchers("/codesuccess").authenticated() // Специфичное правило
-                        .anyRequest().permitAll()) // Общее правило
+                        .requestMatchers("/success").authenticated()
+                        .anyRequest().permitAll())
                 .formLogin(formLogin -> formLogin
-                        .defaultSuccessUrl("/codesuccess"))
+                        .defaultSuccessUrl(REDIRECT_URI))
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
                 .cors(cors -> cors
