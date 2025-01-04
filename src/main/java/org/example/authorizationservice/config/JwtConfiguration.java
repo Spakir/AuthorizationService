@@ -102,7 +102,8 @@ public class JwtConfiguration {
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.toList());
 
-                context.getClaims().claim("roles", roles);
+                var contextClaims = context.getClaims();
+                contextClaims.claim("roles",roles);
                 log.info("Roles added to JWT: {}", roles);
             }
         };
