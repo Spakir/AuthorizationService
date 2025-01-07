@@ -5,16 +5,14 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
+import java.util.HashSet;
+import java.util.Set;
 @Entity
 @Getter
 @Setter
-@ToString(exclude = "id")
-@EqualsAndHashCode(exclude = "id")
+@ToString(exclude = {"id","messages"})
+@EqualsAndHashCode(exclude = {"id","messages"})
 @Table(name = "app_users")
 public class User {
 

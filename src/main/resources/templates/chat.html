@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Чат</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+
+    #messages {
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 300px;
+      overflow-y: scroll;
+      background-color: #fff;
+      margin-bottom: 10px;
+    }
+
+    #messageForm {
+      display: flex;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 10px 15px;
+      font-size: 16px;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jwt-decode/3.1.2/jwt-decode.min.js"></script>
+</head>
+<body>
+<h1 id="greeting">Привет, пользователь!</h1> <!-- Здесь будет отображаться имя пользователя -->
+<div id="messages"></div>
+<form id="messageForm">
+  <input type="text" id="messageInput" placeholder="Введите сообщение" required>
+  <button type="submit">Отправить</button>
+</form>
+<button onclick="logout()">Выйти из аккаунта</button>
+
+<script>
+  function getUsernameFromJWT(token) {
+    if (!token) {
+      console.error("Токен отсутствует");
+      return null;
+    }
+
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      console.error("Неправильный формат JWT");
+      return null;
+    }
+
+    try {
+      const payload = JSON.parse(atob(parts[1]));
+      console.log("Полезная нагрузка JWT:", payload);
+      return payload.sub || null;
+    } catch (e) {
+      console.error("Ошибка при декодировании JWT:", e);
+      return null;
+    }
+  }
+
+  const jwt = document.cookie.split('; ').find(row => row.startsWith('JWT='));
+  const token = jwt ? jwt.split('=')[1] : null; // Извлекаем JWT из куки
+  console.log("JWT из cookie:", token); // Выводим токен в консоль
+  const username = getUsernameFromJWT(token);
+
+  if (username) {
+    document.getElementById('greeting').innerText = `Привет, ${username}!`;
+  } else {
+    document.getElementById('greeting').innerText = 'Имя пользователя не найдено.';
+  }
+
+  function logout() {
+    window.location.href = '/logout'; // Переход на страницу выхода
+  }
+
+  document.getElementById('messageForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    const message = document.getElementById('messageInput').value;
+
+    fetch('/chat/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({username, message})
+    })
+            .then(response => {
+              if (response.ok) {
+                document.getElementById('messageInput').value = '';
+                loadMessages();
+              } else {
+                console.error('Ошибка при отправке сообщения:', response.status);
+              }
+            })
+            .catch(error => console.error('Ошибка:', error));
+  });
+
+  function loadMessages() {
+    fetch('/chat/messages', {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    })
+            .then(response => {
+              if (!response.ok) {
+                console.error('Ошибка при загрузке сообщений:', response.status);
+                return;
+              }
+              return response.json();
+            })
+            .then(data => {
+              const messagesDiv = document.getElementById('messages');
+              messagesDiv.innerHTML = '';
+              data.forEach(msg => {
+                const messageElement = document.createElement('div');
+                messageElement.textContent = `${msg.username}: ${msg.message}`;
+                messagesDiv.appendChild(messageElement);
+              });
+              messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            })
+            .catch(error => console.error('Ошибка при загрузке сообщений:', error));
+  }
+
+  loadMessages();
+</script>
+</body>
+</html>

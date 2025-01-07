@@ -1,3 +1,5 @@
 databaseChangeLog:
   - include: 
       file: /db/changelog/changeset/create_users.sql
+  - include:
+      file: /db/changelog/changeset/create_messages.sql

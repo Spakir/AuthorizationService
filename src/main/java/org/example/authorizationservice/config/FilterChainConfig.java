@@ -35,7 +35,7 @@ public class FilterChainConfig {
 
         http.exceptionHandling((e) ->
                 e.authenticationEntryPoint(
-                        new LoginUrlAuthenticationEntryPoint("/login"))
+                        new LoginUrlAuthenticationEntryPoint("/index"))
         );
 
         return http.build();
@@ -46,7 +46,6 @@ public class FilterChainConfig {
     public SecurityFilterChain formLoginFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(c -> c
-                        .requestMatchers("/success").authenticated()
                         .anyRequest().permitAll())
                 .formLogin(formLogin -> formLogin
                         .defaultSuccessUrl(REDIRECT_URI))

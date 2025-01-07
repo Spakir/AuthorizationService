@@ -7,6 +7,6 @@ CREATE TABLE app_users
 
 CREATE TABLE user_roles
 (
-    user_id BIGINT PRIMARY KEY ,
+    user_id BIGINT PRIMARY KEY REFERENCES app_users(id),
     roles VARCHAR(120)
 );

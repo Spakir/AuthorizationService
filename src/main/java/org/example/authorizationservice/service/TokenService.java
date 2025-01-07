@@ -1,10 +1,14 @@
 package org.example.authorizationservice.service;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
@@ -18,7 +22,7 @@ public class TokenService {
         this.webClient = web.baseUrl("http://localhost:8080").build();
     }
 
-    public Mono<String> exchangeAuthorizationCodeForToken(String code) {
+    public Mono<String> exchangeAuthorizationCodeForToken(String code, HttpServletResponse response) {
         log.info("exchangeAuthCodeForToken: ");
 
         String clientId = "client";
@@ -36,7 +40,28 @@ public class TokenService {
                 .retrieve()
                 .bodyToMono(String.class)
                 .doOnError(e -> log.error("Ошибка при получении токена: {}", e.getMessage()))
-                .onErrorResume(e -> Mono.empty());
+                .onErrorResume(e -> Mono.empty())
+                .doOnNext(jsonResponse -> {
+                    JSONObject jsonObject = new JSONObject(jsonResponse);
+                    String accessToken = jsonObject.getString("access_token");
+
+                    Cookie cookie = new Cookie("JWT", accessToken);
+                    cookie.setHttpOnly(false);
+                    cookie.setPath("/");
+                    cookie.setMaxAge(3600);
+                    cookie.setSecure(false);
+
+                    response.addCookie(cookie);
+                })
+                .then(Mono.fromRunnable(() -> {
+                    try {
+                        // Устанавливаем редирект на /hello
+                        response.sendRedirect("/chat");
+                    } catch (IOException e) {
+                        // Обработка исключений
+                        e.printStackTrace();
+                    }
+                }));
     }
 
 

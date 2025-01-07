@@ -1,7 +1,7 @@
 package org.example.authorizationservice.model;
 
 import lombok.RequiredArgsConstructor;
-import org.example.authorizationservice.dto.UserDto;
+import org.example.dto.UserDto;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

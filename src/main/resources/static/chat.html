@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+
+    #messages {
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 300px;
+      overflow-y: scroll;
+      background-color: #fff;
+      margin-bottom: 10px;
+    }
+
+    #messageForm {
+      display: flex;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 10px 15px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+<h1 id="welcomeMessage"></h1>
+<div id="messages"></div>
+<form id="messageForm">
+  <input type="text" id="messageInput" placeholder="Введите сообщение" required>
+  <button type="submit">Отправить</button>
+</form>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const username = localStorage.getItem('username');
+
+    document.getElementById('welcomeMessage').textContent = `Добро пожаловать, ${username}!`;
+
+    document.getElementById('messageForm').addEventListener('submit', function (event) {
+      event.preventDefault();
+      const message = document.getElementById('messageInput').value;
+
+      fetch('/chat/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({username, message})
+      })
+              .then(response => {
+                if (response.ok) {
+                  document.getElementById('messageInput').value = '';
+                  loadMessages();
+                } else {
+                  console.error('Ошибка при отправке сообщения:', response.status);
+                }
+              })
+              .catch(error => console.error('Ошибка:', error));
+    });
+
+    function loadMessages() {
+      fetch('/chat/messages', {
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      })
+              .then(response => {
+                if (!response.ok) {
+                  console.error('Ошибка при загрузке сообщений:', response.status);
+                  return;
+                }
+                return response.json();
+              })
+              .then(data => {
+                const messagesDiv = document.getElementById('messages');
+                messagesDiv.innerHTML = '';
+                data.forEach(msg => {
+                  const messageElement = document.createElement('div');
+                  messageElement.textContent = `${msg.username}: ${msg.message}`;
+                  messagesDiv.appendChild(messageElement);
+                });
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+              })
+              .catch(error => console.error('Ошибка при загрузке сообщений:', error));
+    }
+
+    loadMessages();
+  });
+</script>
+</body>
+</html>

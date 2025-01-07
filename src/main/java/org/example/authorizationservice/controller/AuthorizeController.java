@@ -19,7 +19,19 @@ public class AuthorizeController {
         return "register";
     }
 
+    @GetMapping("/index")
+    public String showIndexPage(){
+        return "index";
+    }
 
+    @GetMapping("hello")
+    public String getHelloPage(){
+        return "hello";
+    }
+    @GetMapping("chat")
+    public String getChat(){
+        return "chat";
+    }
 
     @PostMapping("/register")
     public String registrationUser(@ModelAttribute UserDto userDto) {
