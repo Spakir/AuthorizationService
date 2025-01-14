@@ -18,6 +18,9 @@ public class CustomUserDetails implements UserDetails {
                 .map(SimpleGrantedAuthority::new)
                 .toList();
     }
+    public Long getId(){
+        return user.getId();
+    }
 
     @Override
     public String getPassword() {

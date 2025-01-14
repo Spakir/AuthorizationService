@@ -2,6 +2,7 @@ package org.example.authorizationservice.provider;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.authorizationservice.model.CustomUserDetails;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -29,11 +30,14 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
         if(passwordEncoder.matches(password,userDetails.getPassword())){
-            return new UsernamePasswordAuthenticationToken(
+            Long userId = ((CustomUserDetails) userDetails).getId();
+            var authToken = new  UsernamePasswordAuthenticationToken(
                     username,
                     password,
                     userDetails.getAuthorities()
             );
+            authToken.setDetails(userId);
+            return authToken;
         }else{
             throw new AuthenticationException("Invalid password") {};
         }

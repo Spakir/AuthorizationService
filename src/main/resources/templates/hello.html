@@ -6,9 +6,9 @@
     <title>Привет</title>
 </head>
 <body>
-<h1 id="greeting">Привет, пользователь!</h1> <!-- Здесь будет отображаться имя пользователя -->
+<h1 id="greeting">Привет, пользователь!</h1>
 <button onclick="logout()">Выйти из аккаунта</button>
-<button onclick="joinChat()">Зайти в чат</button> <!-- Кнопка для входа в чат -->
+<button onclick="joinChat()">Зайти в чат</button>
 
 <script>
     function getUsernameFromJWT(token) {
@@ -24,9 +24,9 @@
         }
 
         try {
-            const payload = JSON.parse(atob(parts[1])); // Декодируем полезную нагрузку
-            console.log("Полезная нагрузка JWT:", payload); // Выводим полезную нагрузку в консоль
-            return payload.sub || null; // Возвращаем значение sub или null
+            const payload = JSON.parse(atob(parts[1]));
+            console.log("Полезная нагрузка JWT:", payload);
+            return payload.sub || null;
         } catch (e) {
             console.error("Ошибка при декодировании JWT:", e);
             return null;
@@ -34,8 +34,8 @@
     }
 
     const jwt = document.cookie.split('; ').find(row => row.startsWith('JWT='));
-    const token = jwt ? jwt.split('=')[1] : null; // Извлекаем JWT из куки
-    console.log("JWT из cookie:", token); // Выводим токен в консоль
+    const token = jwt ? jwt.split('=')[1] : null;
+    console.log("JWT из cookie:", token);
     const username = getUsernameFromJWT(token);
 
     if (username) {
@@ -45,7 +45,7 @@
     }
 
     function logout() {
-        window.location.href = '/logout'; // Переход на страницу выхода
+        window.location.href = '/logout';
     }
 
     function joinChat() {

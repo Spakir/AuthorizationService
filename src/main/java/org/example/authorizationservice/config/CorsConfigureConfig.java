@@ -13,10 +13,10 @@ public class CorsConfigureConfig extends CorsConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:8080", "http://127.0.0.1:3000")); // Разрешенные источники
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:8080", "26.176.191.81")); // Разрешенные источники
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Разрешенные методы
         configuration.setAllowCredentials(true); // Разрешить отправку учетных данных
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type")); // Разрешенные заголовки
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type","X-CSRF-Token")); // Разрешенные заголовки
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration); // Применить конфигурацию ко всем маршрутам

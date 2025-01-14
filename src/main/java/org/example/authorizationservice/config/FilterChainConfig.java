@@ -46,14 +46,19 @@ public class FilterChainConfig {
     public SecurityFilterChain formLoginFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(c -> c
-                        .anyRequest().permitAll())
+                        .requestMatchers("/index","/","/register").permitAll()
+                        .anyRequest().authenticated())
+
                 .formLogin(formLogin -> formLogin
                         .defaultSuccessUrl(REDIRECT_URI))
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+
+                .csrf(Customizer.withDefaults())
+
                 .cors(cors -> cors
                         .configurationSource(corsConfigurationSource))
+
                 .logout(Customizer.withDefaults())
+
                 .authenticationProvider(customAuthenticationProvider);
 
         return http.build();

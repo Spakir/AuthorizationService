@@ -23,7 +23,6 @@ import org.springframework.security.oauth2.server.authorization.settings.OAuth2T
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
-
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -56,7 +55,8 @@ public class JWTConfig {
                         .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
                         .tokenSettings(TokenSettings.builder()
                                 .accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED)
-                                .accessTokenTimeToLive(Duration.ofHours(12))
+                                .accessTokenTimeToLive(Duration.ofSeconds(5))
+                                .refreshTokenTimeToLive(Duration.ofDays(30))
                                 .build())
                         .redirectUri("http://localhost:8080/success")
                         .scope("CUSTOM")
@@ -92,6 +92,8 @@ public class JWTConfig {
 
     @Bean
     public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
+
+        log.info("jwtCustomizer:");
         return context -> {
             Authentication authentication = context.getPrincipal();
             if (authentication != null) {
@@ -102,9 +104,9 @@ public class JWTConfig {
 
                 var contextClaims = context.getClaims();
                 contextClaims.claim("roles",roles);
+                contextClaims.claim("id",authentication.getDetails());
                 log.info("Roles added to JWT: {}", roles);
             }
         };
     }
-
 }

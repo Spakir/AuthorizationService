@@ -1,140 +1,185 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Чат</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background-color: #f4f4f4;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Чат</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
 
-    #messages {
-      border: 1px solid #ccc;
-      padding: 10px;
-      height: 300px;
-      overflow-y: scroll;
-      background-color: #fff;
-      margin-bottom: 10px;
-    }
+        #messages {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow-y: scroll;
+            background-color: #fff;
+            margin-bottom: 10px;
+        }
 
-    #messageForm {
-      display: flex;
-    }
+        #messageForm {
+            display: flex;
+        }
 
-    #messageInput {
-      flex: 1;
-      padding: 10px;
-      font-size: 16px;
-    }
+        #messageInput {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+        }
 
-    button {
-      padding: 10px 15px;
-      font-size: 16px;
-    }
-  </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jwt-decode/3.1.2/jwt-decode.min.js"></script>
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jwt-decode/3.1.2/jwt-decode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 </head>
 <body>
-<h1 id="greeting">Привет, пользователь!</h1> <!-- Здесь будет отображаться имя пользователя -->
+<h1 id="greeting">Привет, пользователь!</h1>
 <div id="messages"></div>
 <form id="messageForm">
-  <input type="text" id="messageInput" placeholder="Введите сообщение" required>
-  <button type="submit">Отправить</button>
+    <input type="text" id="messageInput" placeholder="Введите сообщение" required>
+    <input type="hidden" id="csrfToken" th:value="${_csrf.token}"/>
+    <button type="submit">Отправить</button>
 </form>
 <button onclick="logout()">Выйти из аккаунта</button>
 
 <script>
-  function getUsernameFromJWT(token) {
-    if (!token) {
-      console.error("Токен отсутствует");
-      return null;
+    function getUserDataFromJWT(token) {
+        if (!token) {
+            console.error("Токен отсутствует");
+            return null;
+        }
+
+        const parts = token.split('.');
+        if (parts.length !== 3) {
+            console.error("Неправильный формат JWT");
+            return null;
+        }
+
+        try {
+            const payload = JSON.parse(atob(parts[1]));
+            console.log("Полезная нагрузка JWT:", payload);
+            return {
+                username: payload.sub || null,
+                id: payload.id || null
+            };
+        } catch (e) {
+            console.error("Ошибка при декодировании JWT:", e);
+            return null;
+        }
     }
 
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      console.error("Неправильный формат JWT");
-      return null;
+    const jwt = document.cookie.split('; ').find(row => row.startsWith('JWT='));
+    let token = jwt ? jwt.split('=')[1] : null;
+    console.log("JWT из cookie:", token);
+    const userData = getUserDataFromJWT(token);
+
+    if (userData && userData.username) {
+        document.getElementById('greeting').innerText = `Привет, ${userData.username}!`;
+    } else {
+        document.getElementById('greeting').innerText = 'Имя пользователя не найдено.';
     }
 
-    try {
-      const payload = JSON.parse(atob(parts[1]));
-      console.log("Полезная нагрузка JWT:", payload);
-      return payload.sub || null;
-    } catch (e) {
-      console.error("Ошибка при декодировании JWT:", e);
-      return null;
+    function logout() {
+        window.location.href = '/logout';
     }
-  }
 
-  const jwt = document.cookie.split('; ').find(row => row.startsWith('JWT='));
-  const token = jwt ? jwt.split('=')[1] : null; // Извлекаем JWT из куки
-  console.log("JWT из cookie:", token); // Выводим токен в консоль
-  const username = getUsernameFromJWT(token);
+    const csrfToken = document.getElementById('csrfToken').value;
 
-  if (username) {
-    document.getElementById('greeting').innerText = `Привет, ${username}!`;
-  } else {
-    document.getElementById('greeting').innerText = 'Имя пользователя не найдено.';
-  }
+    const socket = new SockJS(`http://localhost:8081/websocket`); // URL вашего WebSocket сервера
+    const stompClient = Stomp.over(socket);
 
-  function logout() {
-    window.location.href = '/logout'; // Переход на страницу выхода
-  }
+    stompClient.connect(
+        {
+            "Authorization": "Bearer " + token
+        },
+        function (frame) {
+            console.log('Подключено: ' + frame);
 
-  document.getElementById('messageForm').addEventListener('submit', function (event) {
-    event.preventDefault();
-    const message = document.getElementById('messageInput').value;
-
-    fetch('/chat/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-      body: JSON.stringify({username, message})
-    })
-            .then(response => {
-              if (response.ok) {
-                document.getElementById('messageInput').value = '';
-                loadMessages();
-              } else {
-                console.error('Ошибка при отправке сообщения:', response.status);
-              }
-            })
-            .catch(error => console.error('Ошибка:', error));
-  });
-
-  function loadMessages() {
-    fetch('/chat/messages', {
-      headers: {
-        'Authorization': 'Bearer ' + token
-      }
-    })
-            .then(response => {
-              if (!response.ok) {
-                console.error('Ошибка при загрузке сообщений:', response.status);
-                return;
-              }
-              return response.json();
-            })
-            .then(data => {
-              const messagesDiv = document.getElementById('messages');
-              messagesDiv.innerHTML = '';
-              data.forEach(msg => {
+            stompClient.subscribe('/client/send', function (message) {
+                const msg = JSON.parse(message.body);
+                const messagesDiv = document.getElementById('messages');
                 const messageElement = document.createElement('div');
-                messageElement.textContent = `${msg.username}: ${msg.message}`;
-                messagesDiv.appendChild(messageElement);
-              });
-              messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            })
-            .catch(error => console.error('Ошибка при загрузке сообщений:', error));
-  }
 
-  loadMessages();
+                messageElement.textContent = `${msg.username}: ${msg.content}`;
+                messagesDiv.appendChild(messageElement);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка вниз
+            });
+        },
+        function (error) {
+            console.error('Ошибка подключения к WebSocket: ', error);
+        }
+    );
+
+    function isTokenExpired(token) {
+        if (!token) return true;
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        const currentTime = Date.now() / 1000;
+        return decoded.exp < currentTime;
+    }
+
+    const refreshTokenCookie = document.cookie.split('; ').find(row => row.startsWith('refreshToken='));
+    let refreshToken = refreshTokenCookie ? refreshTokenCookie.split('=')[1] : null;
+    console.log("refreshToken из cookie:", refreshToken);
+
+    async function refreshAccessToken() {
+        const response = await fetch('/refreshToken', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken // Передаем CSRF токен в заголовке
+            },
+            body: JSON.stringify({refToken:refreshToken})
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            token = data.access_token;
+
+            console.log('data access token : ' + data.access_token)
+
+            document.cookie = `JWT=${data.accessToken}; path=/`;
+
+            return token;
+        } else {
+            console.error("Не удалось обновить токен, статус: ", response.status);
+            return null;
+        }
+    }
+
+    document.getElementById('messageForm').addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const message = document.getElementById('messageInput').value;
+
+        // Проверяем, истек ли токен
+        if (isTokenExpired(token)) {
+            console.log("Токен истек, обновляем...");
+            const newToken = await refreshAccessToken()
+            console.log('new token : ' + newToken)
+            if (!newToken) {
+                alert("Не удалось обновить токен. Пожалуйста, войдите в систему снова.");
+                return;
+            }
+        }
+
+        const messageData = {
+            userId: userData.id,
+            content: message
+        };
+
+        stompClient.send("/server/send", {
+            "Authorization": "Bearer " + token
+        }, JSON.stringify(messageData));
+
+        document.getElementById('messageInput').value = '';
+    });
 </script>
 </body>
 </html>
