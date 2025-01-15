@@ -16,3 +16,21 @@ spring:
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/master-db.yaml
+
+  security:
+    oauth2:
+      client:
+        registration:
+          custom:
+            client-id: client
+            client-secret: clientSecret
+            scope: CUSTOM
+            authorization-grant-type: authorization_code
+            client-name: custom
+
+        provider:
+          custom:
+            authorization-uri: http://localhost:8080/oauth2/auth
+            token-uri: http://localhost:8080/oauth2/token
+
+

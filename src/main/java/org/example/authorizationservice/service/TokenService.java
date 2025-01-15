@@ -4,6 +4,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -23,18 +24,24 @@ public class TokenService {
     private final boolean ACCESS_TOKEN_HTTP_ONLY = false;
     private final boolean ACCESS_TOKEN_SECURE = false;
 
+    private final String REFRESH_TOKEN_NAME = "refreshToken";
+    private final String REFRESH_TOKEN_PATH = "/";
+    private final int REFRESH_TOKEN_EXPIRY = 3600 * 24 * 30;
+    private final boolean REFRESH_TOKEN_HTTP_ONLY = false;
+    private final boolean REFRESH_TOKEN_SECURE = false;
+
+    @Value("${spring.security.oauth2.client.registration.custom.client-id}")
+    private String clientId;
+
+    @Value("${spring.security.oauth2.client.registration.custom.client-secret}")
+    private String clientSecret;
 
     public TokenService(WebClient.Builder web) {
         this.webClient = web.baseUrl("http://localhost:8080").build();
     }
 
     public Mono<String> exchangeAuthorizationCodeForToken(String code, HttpServletResponse response) {
-        log.info("exchangeAuthCodeForToken: ");
-
-        String clientId = "client";
-        String clientSecret = "clientSecret";
-        String auth = clientId + ":" + clientSecret;
-        String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+        String encodedAuth = getEncodedAuthenticationForClient();
 
         return webClient.post()
                 .uri("/oauth2/token")
@@ -48,24 +55,18 @@ public class TokenService {
                 .doOnError(e -> log.error("Ошибка при получении токена: {}", e.getMessage()))
                 .onErrorResume(e -> Mono.empty())
                 .doOnNext(jsonResponse -> {
-                    log.info("Json response: ");
+
                     JSONObject jsonObject = new JSONObject(jsonResponse);
                     String accessToken = jsonObject.getString("access_token");
                     String refreshToken = jsonObject.getString("refresh_token");
 
                     log.info("refresh token : {}", refreshToken);
 
-                    String refreshTokenName = "refreshToken";
-                    String refreshTokenPath = "/";
-                    int refreshTokenExpiry = 3600 * 24 * 30;
-                    boolean refreshTokenHttpOnly = false;
-                    boolean refreshTokenSecure = false;
-
-                    createNewCookie(refreshTokenName,
-                            refreshToken, refreshTokenHttpOnly,
-                            refreshTokenPath,
-                            refreshTokenExpiry,
-                            refreshTokenSecure,
+                    createNewCookie(REFRESH_TOKEN_NAME,
+                            refreshToken, REFRESH_TOKEN_HTTP_ONLY,
+                            REFRESH_TOKEN_PATH,
+                            REFRESH_TOKEN_EXPIRY,
+                            REFRESH_TOKEN_SECURE,
                             response);
 
                     createNewCookie(ACCESS_TOKEN_NAME,
@@ -91,14 +92,9 @@ public class TokenService {
             return Mono.error(new RuntimeException("Refresh token is missing"));
         }
 
-        String clientId = "client";
-        String clientSecret = "clientSecret";
-        String auth = clientId + ":" + clientSecret;
-        String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
-
+        String encodedAuth = getEncodedAuthenticationForClient();
         JSONObject jsonRefToken = new JSONObject(refreshTokenJson);
         String refreshToken = jsonRefToken.getString("refToken");
-
 
         log.info("token service refresh method calls");
         return webClient.post()
@@ -139,13 +135,13 @@ public class TokenService {
                 });
     }
 
-    public static void createNewCookie(String name,
-                                       String value,
-                                       boolean httpOnly,
-                                       String path,
-                                       int expiry,
-                                       boolean secure,
-                                       HttpServletResponse response) {
+    public void createNewCookie(String name,
+                                String value,
+                                boolean httpOnly,
+                                String path,
+                                int expiry,
+                                boolean secure,
+                                HttpServletResponse response) {
 
         Cookie cookie = new Cookie(name, value);
         cookie.setHttpOnly(httpOnly);
@@ -154,5 +150,12 @@ public class TokenService {
         cookie.setSecure(secure);
 
         response.addCookie(cookie);
+    }
+
+    public String getEncodedAuthenticationForClient() {
+        String auth = String.format("%s:%s", clientId, clientSecret);
+        String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+
+        return encodedAuth;
     }
 }
